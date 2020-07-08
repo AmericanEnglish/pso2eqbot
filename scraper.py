@@ -104,9 +104,9 @@ def getEventPages(events):
     page_open = lambda page: urllib.request.urlopen("{}/{}".format(base, page))
     pages = list(map(lambda page: page_open(page), events))
     pages = list(map(lambda page: page.read(), pages))
-    for i, page in enumerate(pages):
-        with open(events[i], "wb") as outfile:
-            outfile.write(page)
+    # for i, page in enumerate(pages):
+        # with open(events[i], "wb") as outfile:
+            # outfile.write(page)
     # Now download all the HTML pages associated with the given eqs
     return pages
 
