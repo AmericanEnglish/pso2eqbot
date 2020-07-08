@@ -124,7 +124,7 @@ def getTables(pages):
                 # Small table
                 tables[i][j] = parseSmallTable(subtable)
     # Insert the color into the small tables
-    print(len(tables), len(tables[0]))
+    # print(len(tables), len(tables[0]))
     return tables
 
 def removeChars(s, chars):
@@ -150,7 +150,7 @@ def pageTablesToDataframes(tables):
                     t = pandas.DataFrame(splitEQCategoryLine(t.iloc[0,:].copy())).T
                 else:
                     t = t.apply(splitEQCategoryLine, axis=1)
-                print(t)
+                # print(t)
                 tables[i][j] = t
     return tables 
 
@@ -187,7 +187,7 @@ def splitEQCategoryLine(row):
     return row
 
 def assembleBetterTable(pageName, schedule, legend):
-    columns = ["datetime", "category", "eqname", "duration", "hex"]
+    columns = ["datetime", "category", "event1", "duration", "hex"]
     year = pageName.split("part")[0][-4:]
     days  = schedule.iloc[0,1:].to_list()
     days  = [day.strip() for day in days]
@@ -195,13 +195,24 @@ def assembleBetterTable(pageName, schedule, legend):
     times = schedule.iloc[3:, 0].to_list()
     times = [t.strip() for t in times]
 
-    index = list(product(days, times))
-    for i, value in enumerate(index):
-        value = " ".join(value)
-        value = datetime.strptime("{} {} PST".format(value, year), '%m/%d/%Y %I:%M:%S %p %Z')
-        index[i] = value
-    d = pandas.DataFrame(index=index, columns=columns)
-    
+    for row in schedule.iterrows():
+        pass
+        
+    d = pandas.DataFrame(index=range(len(times)), columns=columns)
+    print(d)
+
+def getDatetime(args):
+    # Expect 3 arguments for time
+    # "%m/%d", "%y", "%I:%M %p"
+    v = args[0].split("/")
+    v.append(args[1])
+    v.extend(args[2][:-2].split(":"))
+    v.append(args[2][-2:])
+    value = "{:02d}/{:02d}/{} {:02d}:{:02d}{} -0700".format(
+            int(v[0]), int(v[1]), int(v[2]), int(v[3]), int(v[4]), v[5])
+    value = datetime.strptime(value, '%m/%d/%Y %I:%M%p %z')
+    return value
+
 if __name__ == "__main__":
     uqEntries = getUQPage()
     lines = uqEntries
