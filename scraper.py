@@ -2,7 +2,8 @@ from bs4 import BeautifulSoup
 import pandas
 import urllib.request
 import webcolors
-
+from itertools import product
+from datetime import datetime
 # Do something with this because globals are naughty
 base = "https://pso2.com/news/urgent-quests"
 def getUQPage():
@@ -185,6 +186,22 @@ def splitEQCategoryLine(row):
         row[3] = ""
     return row
 
+def assembleBetterTable(pageName, schedule, legend):
+    columns = ["datetime", "category", "eqname", "duration", "hex"]
+    year = pageName.split("part")[0][-4:]
+    days  = schedule.iloc[0,1:].to_list()
+    days  = [day.strip() for day in days]
+
+    times = schedule.iloc[3:, 0].to_list()
+    times = [t.strip() for t in times]
+
+    index = list(product(days, times))
+    for i, value in enumerate(index):
+        value = " ".join(value)
+        value = datetime.strptime("{} {} PST".format(value, year), '%m/%d/%Y %I:%M:%S %p %Z')
+        index[i] = value
+    d = pandas.DataFrame(index=index, columns=columns)
+    
 if __name__ == "__main__":
     uqEntries = getUQPage()
     lines = uqEntries
@@ -193,16 +210,13 @@ if __name__ == "__main__":
     pages = getEventPages(lines)
     tables = getTables(pages)
     frames = pageTablesToDataframes(tables)
+    
     # for body in tables[0][0]:
         # body.unwrap()
     print(frames[0][0])
     print(frames[0][1])
-    # with open("sample1.html", "w") as outfile:
-        # outfile.write(tables[0][0].prettify())
-    # with open("sample2.html", "w") as outfile:
-        # outfile.write(tables[0][1].prettify())
-    # print(type(tables[0][1]))
-    # tables[0][1].to_html("{}.html".format(lines[0]))
+    frame = assembleBetterTable(lines[0], frames[0][0], frames[0][1])
+
     # The goal is to end up with a dataframe where the contents of each cell is the color of the cell
     # From there you can do an easy sub from the color tables for the EQ actually is.
     # The format always seems to be EQ, Color, EQ, Color
