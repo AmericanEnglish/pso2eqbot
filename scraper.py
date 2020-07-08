@@ -235,7 +235,7 @@ def assembleBetterTable(pageName, schedule, legend):
         print("Naughty colors...", list(zip(badColors, fixedColors)), w, legend)
     d = d.join(legend.set_index("hex"), on="hex")
     # print(d)
-    return d
+    return d.drop_duplicates()
 
 def getDatetime(args):
     # Expect 3 arguments for time
