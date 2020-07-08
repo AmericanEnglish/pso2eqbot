@@ -1,6 +1,7 @@
 from bs4 import BeautifulSoup
 from math import sqrt
 import pandas
+# Replace urllib with aiohttp 
 import urllib.request
 import webcolors
 from itertools import product
@@ -261,14 +262,24 @@ def getClosestColor(badColor, goodColors):
 def euc(v1, v2):
     return sqrt(sum(list(map(lambda i: (v1[i]-v2[i])**2, range(len(v1))))))
 
-def combineAllFrames(allFrames):
+def combineAllFrames(eqs, allFrames):
     d = pandas.DataFrame({}, columns=["datetime", "category", "event", "duration", "hex"])
-    for i, subframes in enumerate(frames):
+    for i, subframes in enumerate(allFrames):
         for j in range(0, len(subframes), 2):
-            d = pandas.concat([d, assembleBetterTable(lines[0], subframes[j], subframes[j+1])])
+            d = pandas.concat([d, assembleBetterTable(eqs[i], subframes[j], subframes[j+1])])
             d.reset_index()
     d.sort_values(by=["datetime", "category"], inplace=True, ascending=False)
     return d
+
+# This function will go away once things transition to live updates and a database
+def getAllEQs():
+    uqEntries = getUQPage()
+    pages = getEventPages(uqEntries)
+    tables = getTables(pages)
+    frames = pageTablesToDataframes(tables)
+    final = combineAllFrames(uqEntries, frames)
+    return final
+
 if __name__ == "__main__":
     uqEntries = getUQPage()
     lines = uqEntries
@@ -277,11 +288,8 @@ if __name__ == "__main__":
     pages = getEventPages(lines)
     tables = getTables(pages)
     frames = pageTablesToDataframes(tables)
-    
+   
     # for body in tables[0][0]:
         # body.unwrap()
-    print(frames[0][0])
-    print(frames[0][1])
-    final = combineAllFrames(frames)
     print(final)
     final.iloc[:,:-1].to_html("eqs.html", index=False)
