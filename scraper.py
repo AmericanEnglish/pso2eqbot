@@ -285,11 +285,3 @@ if __name__ == "__main__":
     final = combineAllFrames(frames)
     print(final)
     final.iloc[:,:-1].to_html("eqs.html", index=False)
-    # The goal is to end up with a dataframe where the contents of each cell is the color of the cell
-    # From there you can do an easy sub from the color tables for the EQ actually is.
-    # The format always seems to be EQ, Color, EQ, Color
-    # To know that everything works it should suffice to be able to list each EQ and how many times it happened per week
-    # Then we know that we are properly parsing all data (probably) and can start reformatting it for user consumption 
-    # because dataframes are nice to work with
-    # Do not forget that color tables use rgb(R, G, B) where as EQ tables use #HEXVALUE
-# <a class="read-more" onclick="(ShowDetails('uqjune2020part2', 'emergency'))">READ MORE <i class="fas fa-caret-right"></i></a>
