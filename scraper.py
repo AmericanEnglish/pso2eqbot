@@ -1,10 +1,11 @@
 from bs4 import BeautifulSoup
+from math import sqrt
 import pandas
 import urllib.request
 import webcolors
 from itertools import product
 from datetime import datetime
-from numpy.libalg import norm
+from numpy.linalg import norm
 # Do something with this because globals are naughty
 base = "https://pso2.com/news/urgent-quests"
 def getUQPage():
@@ -40,8 +41,11 @@ def parseLargeTable(table):
                     if s[:len(m)] == m:
                         q = s.split(":")[1].strip()
                         q = removeChars(q, "(),").strip().split()
-                        h = getColor(q)
-                        element.string = h.upper()
+                        h = getColor(q).upper()
+                        # They randomly label cells white.... why!
+                        if h != "#FFFFFF":
+                            # print(h)
+                            element.string = h
     return table
 
 def parseSmallTable(table):
@@ -55,8 +59,8 @@ def parseSmallTable(table):
                 if s[:len(m)] == m:
                     q = s.split(":")[1].strip()
                     q = removeChars(q, "(),").strip().split()
-                    h = getColor(q)
-                    element.string = h.upper()
+                    h = getColor(q).upper()
+                    element.string = h
     return table
 
 
@@ -216,10 +220,21 @@ def assembleBetterTable(pageName, schedule, legend):
                 d = d.append({"datetime":dt, "hex":h}, ignore_index=True)
     
     # Use dataframe join to merge legend on hex
-    print(d)
-    print(legend)
+    # First determine what hexs in d are not in the legend...
+    ud = pandas.Index(pandas.unique(d["hex"]))
+    # We assume the legend is unique or we have nothing in this world we can trust
+    badColors = ud.difference(legend["hex"])
+    if len(badColors) != 0:
+        goodColors = legend["hex"]
+        fixedColors = []
+        for badColor in badColors:
+            goodColor = getClosestColor(badColor, goodColors)
+            fixedColors.append(goodColor)
+            w = d.copy()
+            d.loc[d["hex"] == badColor, "hex"] = goodColor
+        print("Naughty colors...", list(zip(badColors, fixedColors)), w, legend)
     d = d.join(legend.set_index("hex"), on="hex")
-    print(d)
+    # print(d)
 
 def getDatetime(args):
     # Expect 3 arguments for time
@@ -233,6 +248,17 @@ def getDatetime(args):
     value = datetime.strptime(value, '%m/%d/%Y %I:%M%p %z')
     return value
 
+def getClosestColor(badColor, goodColors):
+    # Get RGB
+    badRGB =   webcolors.hex_to_rgb(badColor)
+    goodRGBs = [webcolors.hex_to_rgb(x) for x in goodColors]
+    distance = [euc(badRGB, RGB) for RGB in goodRGBs]
+    match = goodRGBs[distance.index(min(distance))]
+    match = webcolors.rgb_to_hex(match).upper()
+    return match
+
+def euc(v1, v2):
+    return sqrt(sum(list(map(lambda i: (v1[i]-v2[i])**2, range(len(v1))))))
 if __name__ == "__main__":
     uqEntries = getUQPage()
     lines = uqEntries
@@ -246,7 +272,10 @@ if __name__ == "__main__":
         # body.unwrap()
     print(frames[0][0])
     print(frames[0][1])
-    frame = assembleBetterTable(lines[0], frames[0][0], frames[0][1])
+    allFinalFrames = []
+    for i, subframes in enumerate(frames):
+        for j in range(0, len(subframes), 2):
+            frames = assembleBetterTable(lines[0], subframes[j], subframes[j+1])
 
     # The goal is to end up with a dataframe where the contents of each cell is the color of the cell
     # From there you can do an easy sub from the color tables for the EQ actually is.
