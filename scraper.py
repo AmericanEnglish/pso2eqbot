@@ -4,6 +4,7 @@ import urllib.request
 import webcolors
 from itertools import product
 from datetime import datetime
+from numpy.libalg import norm
 # Do something with this because globals are naughty
 base = "https://pso2.com/news/urgent-quests"
 def getUQPage():
@@ -150,6 +151,8 @@ def pageTablesToDataframes(tables):
                     t = pandas.DataFrame(splitEQCategoryLine(t.iloc[0,:].copy())).T
                 else:
                     t = t.apply(splitEQCategoryLine, axis=1)
+                t = pandas.DataFrame(t.to_numpy(), columns=["hex", "category", "event", "duration"])
+                t = t.apply(lambda row: row.apply(lambda x: x.strip()), axis=1)
                 # print(t)
                 tables[i][j] = t
     return tables 
@@ -187,18 +190,35 @@ def splitEQCategoryLine(row):
     return row
 
 def assembleBetterTable(pageName, schedule, legend):
-    columns = ["datetime", "category", "event1", "duration", "hex"]
+    columns = ["datetime", "hex"]# "category", "event", "duration", "hex"]
     year = pageName.split("part")[0][-4:]
     days  = schedule.iloc[0,1:].to_list()
     days  = [day.strip() for day in days]
 
-    times = schedule.iloc[3:, 0].to_list()
-    times = [t.strip() for t in times]
-
-    for row in schedule.iterrows():
-        pass
-        
-    d = pandas.DataFrame(index=range(len(times)), columns=columns)
+    d = pandas.DataFrame({}, columns=columns)
+    for i, row in schedule.iloc[3:,:].iterrows():
+        for j, col in row.iloc[1:].iteritems():
+            # Is there an event here? Should be a hex value if so
+            if bool(col):
+                # print(col)
+                # print(row)
+                # print(j)
+                # Hex
+                h = col
+                # Date
+                # j returned from iteritems() counts the first ignored column
+                date = days[j-1]
+                # Time
+                tyme = row.iloc[0]
+                # print(tyme)
+                # Datetime
+                dt = getDatetime([date, year, tyme])
+                d = d.append({"datetime":dt, "hex":h}, ignore_index=True)
+    
+    # Use dataframe join to merge legend on hex
+    print(d)
+    print(legend)
+    d = d.join(legend.set_index("hex"), on="hex")
     print(d)
 
 def getDatetime(args):
