@@ -164,7 +164,7 @@ def pageTablesToDataframes(tables):
 def splitEQCategoryLine(row):
     # print("THAT ROW")
     # print(row)
-    cell = row[1]
+    cell = row[1].lower()
     cell = cell.split(":")
     if len(cell) == 1:
         print("splitEQCategoryLine imploded?")
@@ -183,13 +183,13 @@ def splitEQCategoryLine(row):
         duration = " ".join(duration)
         event = " ".join(event)
 
-        row[1] = category
-        row[2] = event
+        row[1] = category.title()
+        row[2] = event.title()
         row[3] = duration
     else:
         event = " ".join(event)
-        row[1] = category
-        row[2] = event
+        row[1] = category.title()
+        row[2] = event.title()
         row[3] = ""
     return row
 
@@ -235,6 +235,7 @@ def assembleBetterTable(pageName, schedule, legend):
         print("Naughty colors...", list(zip(badColors, fixedColors)), w, legend)
     d = d.join(legend.set_index("hex"), on="hex")
     # print(d)
+    return d
 
 def getDatetime(args):
     # Expect 3 arguments for time
@@ -259,6 +260,15 @@ def getClosestColor(badColor, goodColors):
 
 def euc(v1, v2):
     return sqrt(sum(list(map(lambda i: (v1[i]-v2[i])**2, range(len(v1))))))
+
+def combineAllFrames(allFrames):
+    d = pandas.DataFrame({}, columns=["datetime", "category", "event", "duration", "hex"])
+    for i, subframes in enumerate(frames):
+        for j in range(0, len(subframes), 2):
+            d = pandas.concat([d, assembleBetterTable(lines[0], subframes[j], subframes[j+1])])
+            d.reset_index()
+    d.sort_values(by=["datetime", "category"], inplace=True, ascending=False)
+    return d
 if __name__ == "__main__":
     uqEntries = getUQPage()
     lines = uqEntries
@@ -272,11 +282,9 @@ if __name__ == "__main__":
         # body.unwrap()
     print(frames[0][0])
     print(frames[0][1])
-    allFinalFrames = []
-    for i, subframes in enumerate(frames):
-        for j in range(0, len(subframes), 2):
-            frames = assembleBetterTable(lines[0], subframes[j], subframes[j+1])
-
+    final = combineAllFrames(frames)
+    print(final)
+    final.iloc[:,:-1].to_html("eqs.html", index=False)
     # The goal is to end up with a dataframe where the contents of each cell is the color of the cell
     # From there you can do an easy sub from the color tables for the EQ actually is.
     # The format always seems to be EQ, Color, EQ, Color
