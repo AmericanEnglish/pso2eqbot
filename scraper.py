@@ -245,9 +245,10 @@ def getDatetime(args):
     v.append(args[1])
     v.extend(args[2][:-2].split(":"))
     v.append(args[2][-2:])
-    value = "{:02d}/{:02d}/{} {:02d}:{:02d}{} -0700".format(
+    value = "{:02d}/{:02d}/{} {:02d}:{:02d}{}".format(
             int(v[0]), int(v[1]), int(v[2]), int(v[3]), int(v[4]), v[5])
-    value = datetime.strptime(value, '%m/%d/%Y %I:%M%p %z')
+    value = datetime.strptime(value, '%m/%d/%Y %I:%M%p')
+    value = pytz.timezone("America/Los_Angeles").localize(value)
     return value
 
 def getClosestColor(badColor, goodColors):
