@@ -2,55 +2,52 @@ from datetime import datetime, date, timedelta
 from fuzzywuzzy import process
 import pandas
 import pytz
-
+from sqlalchemy.sql.expression import text
 pandas.set_option('colheader_justify', 'center')
 
-from scraper import getAllEQs
-eqs = getAllEQs()
-
-def query(args, eqFrame):
-    from datetime import datetime, date, timedelta
-    import pytz
-    import pandas
-    arg = " ".join(args)
-    # First select all unique events
-
-    events = unique(eqFrame["event"])
-    # Then fuzzy match using input
-    eventMatches = process.extract(arg, events)
-    _, p = tuple(zip(*eventMatches))
-    m = max(p)
-    # Gather all matches
-    matches = []
-    for item in eventMatches:
-        if item[1] == m:
-            matches.append(item[0])
-    
-    # Return a nicely formatting table...?
-    d = eqFrame.copy()
-    d = d.loc[d.event.isin(matches)]
-    # Limit it for today 
-    # Should return today at 00:00
-    today = datetime.combine(date.today(), datetime.min.time())
-    today = pytz.timezone("America/Detroit").localize(today)
-    d = d.loc[(today + timedelta(days=1) >= d["datetime"]) & (d["datetime"] >= today)]
-    d = pandas.DataFrame(d.to_numpy()[:,:-1], columns=["Date & Time", "Event Type", "Event", "Duration"])
-    return "```\n{}\n```".format(d.to_string(index=False))
-
-def getTodaysEvents(*args):
+def getTodaysEvents(db=None, *args):
     tz = getRequestedTimezone(*args)
-    # Get server today
     today = pytz.timezone("America/Detroit").localize(datetime.now())
-    # Get requested timezone today
+    # Get the range in the user's timezone
     today = today.astimezone(tz)
     # 1/2 before right now will give us currently happening events
     before = today - timedelta(minutes=30)
     # Till the end of today -- make a today+ which displays into tomorrow near end of day
     end    = datetime(year=today.year, month=today.month, day=(today + timedelta(days=1)).day, hour=0, minute=0, second=0, microsecond=0)
     end    = tz.localize(end)
-    # This is a string
-    events = getEvents(before, end, tz)
-    return events
+
+    # Given the "day range" in the users timezone we now need to convert BACK to PDT
+    # so that we can search the database
+    startPDT = before.astimezone(pytz.timezone("America/Los_Angeles"))
+    endPDT =   end.astimezone(pytz.timezone("America/Los_Angeles"))
+    # Search the DB
+    with db.begin():
+        res = db.execute(text("""
+                SELECT datetime(datetime), event 
+                FROM pso2na_timetable 
+                WHERE :afterTime >= pso2na_timetable.datetime 
+                AND   :beforeTime <= pso2na_timetable.datetime"""),
+                {"beforeTime": startPDT, "afterTime": endPDT})
+    res = res.fetchall()
+    # Convert all time strings to datetime
+    times = []
+    for tyme in res:
+        event = tyme[1]
+        tyme = tyme[0]
+        tyme = datetime.strptime(tyme, "%Y-%m-%d %H:%M:%S")
+        tyme = pytz.timezone("America/Los_Angeles").localize(tyme)
+        times.append((tyme, event))
+    # Now chop them up and do the dataframe thing    
+    d = pandas.DataFrame(times, columns=["datetime", "event"])
+    if d.shape[0] != 0:
+        d = d.apply(lambda row: addDateAndTimeString(row, tz), axis=1)
+        # print(d)
+        d = pandas.DataFrame(d[["date", "time", "event"]].to_numpy(), columns=["Date", "Time", "Event"])
+        return "```\nTimezone: {}\n{}\n```".format(tz, d.to_string(index=False))
+    else:
+        return "No events schedule from {} to {}".format(
+                before.strftime("%b, %d %I:%M%p %Z"),
+                end.strftime("%b, %d %I:%M%p %Z"))
 
 def getTomorrowsEvents(*args):
     tz = getRequestedTimezone(*args)
