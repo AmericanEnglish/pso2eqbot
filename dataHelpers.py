@@ -97,7 +97,7 @@ def getEvents(startTime, endTime, tz):
     if d.shape[0] > 0:
         d = d[["date", "time", "event"]]
         d = pandas.DataFrame(d.to_numpy(), columns=["Date", "Time", "Event"])
-        return "```\n{}\n```".format(d.to_string(index=False))
+        return "```\nTimezone: {}\n{}\n```".format(tz, d.to_string(index=False))
     else:
         return "No events schedule from {} to {}".format(
                 before.strftime("%b, %d %I:%M%p %Z"),
