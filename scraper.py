@@ -1,6 +1,7 @@
 from bs4 import BeautifulSoup
 from math import sqrt
 import pandas
+import pytz
 # Replace urllib with aiohttp 
 import urllib.request
 import webcolors
@@ -9,7 +10,7 @@ from datetime import datetime
 from numpy.linalg import norm
 # Do something with this because globals are naughty
 base = "https://pso2.com/news/urgent-quests"
-def getUQPage():
+def getUQPages():
     from re import match
     chars = "(),'"
 
@@ -218,7 +219,7 @@ def assembleBetterTable(pageName, schedule, legend):
                 # print(tyme)
                 # Datetime
                 dt = getDatetime([date, year, tyme])
-                d = d.append({"datetime":dt, "hex":h}, ignore_index=True)
+                d = d.append({"datetime":dt, "hex":h, "fromPage": pageName}, ignore_index=True)
     
     # Use dataframe join to merge legend on hex
     # First determine what hexs in d are not in the legend...
@@ -274,15 +275,22 @@ def combineAllFrames(eqs, allFrames):
 
 # This function will go away once things transition to live updates and a database
 def getAllEQs():
-    uqEntries = getUQPage()
+    uqEntries = getUQPages()
     pages = getEventPages(uqEntries)
     tables = getTables(pages)
     frames = pageTablesToDataframes(tables)
     final = combineAllFrames(uqEntries, frames)
     return final
 
+def getSomeUQData(pageNames):
+    pages = getEventPages(pageNames)
+    tables = getTables(pages)
+    frames = pageTablesToDataframes(tables)
+    final = combineAllFrames(pageNames, frames)
+    return final
+
 if __name__ == "__main__":
-    uqEntries = getUQPage()
+    uqEntries = getUQPages()
     lines = uqEntries
     for i, line in enumerate(lines):
         print("{:02d} :: {}".format(i, line))
