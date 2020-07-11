@@ -93,6 +93,10 @@ class ActiveBackground(commands.Cog):
         print("waiting...")
         await self.bot.wait_until_ready()
 
+    @tasks.loop(seconds=60, count=None)
+    async def eventReminder(self):
+        pass
+
 class Cleanup(commands.Cog):
     def __init__(self, bot, conn):
         self.conn = conn
