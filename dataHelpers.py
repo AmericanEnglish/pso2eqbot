@@ -117,4 +117,41 @@ def addDateAndTimeString(row, tz):
     row["time"] = row["datetime"].astimezone(tz).strftime("%I:%M%p")
     return row
 
-
+def getNotifications(conn, minutesOut=60, rightNow=True):
+    now = datetime.now()
+    now = pytz.timezone("America/Detroit").localize(now)
+    now = now.astimezone(pytz.timezone("America/Los_Angeles"))
+    if rightNow:
+        start = now - timedelta(minutes=30)
+    else:
+        start = now
+    end = now + timedelta(minutes=minutesOut)
+    with conn.begin():
+        res = conn.execute(text(
+            """SELECT datetime(datetime), event FROM pso2na_timetable 
+            WHERE :end >= pso2na_timetable.datetime
+            AND pso2na_timetable.datetime >= :start;"""),
+                {"end": end, "start": start})
+    res = res.fetchall()
+    # If you want customizble intervals this section has to change 
+    interval = [60, 15, 0]
+    base = "The URGENT QUEST {} is happenning {}"
+    print(start)
+    print(now)
+    print(end)
+    print(res)
+    toSend = []
+    for dt, event in res:
+        tyme = datetime.strptime(dt, "%Y-%m-%d %H:%M:%S")
+        lnow = datetime(year=now.year, month=now.month, day=now.day, hour=now.hour, minute=now.minute, second=0)
+        diff = tyme - lnow
+        print(diff, type(diff))
+        print(timedelta(minutes=30) == timedelta(minutes=30))
+        if diff == timedelta(minutes=interval[0]):
+            toSend.append(base.format(event, "in {} minutes!".format(interval[0])))
+        elif diff == timedelta(minutes=interval[1]):
+            toSend.append(base.format(event, "in {} minutes!".format(interval[1])))
+        elif diff == timedelta(minutes=interval[2]):
+            toSend.append(base.format(event, "now!"))
+    print(toSend)
+    return toSend[::-1]

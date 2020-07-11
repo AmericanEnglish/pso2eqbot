@@ -8,6 +8,7 @@ import pytz
 from dataHelpers import getRequestedTimezone
 from dataHelpers import getTodaysEvents
 from dataHelpers import getTomorrowsEvents
+from dataHelpers import getNotifications
 from databaseCommands import *
 
 class TimeCommands(commands.Cog):
@@ -70,6 +71,7 @@ class ActiveBackground(commands.Cog):
         self.bot  = bot
         self.updateViaWebpage.start()
         self.dailyReminder.start()
+        self.eventReminder.start()
 
     @tasks.loop(hours=24)
     async def updateViaWebpage(self):
@@ -90,12 +92,26 @@ class ActiveBackground(commands.Cog):
 
     @dailyReminder.before_loop
     async def beforeReminder(self):
-        print("waiting...")
+        print("Daily Reminder waiting...")
         await self.bot.wait_until_ready()
 
     @tasks.loop(seconds=60, count=None)
     async def eventReminder(self):
-        pass
+        print("Reminding....")
+        notifications = getNotifications(self.conn, minutesOut=60, rightNow=True)
+        update = getAllGuilds(self.conn)
+        print("Notifications....", notifications)
+        print("Notify:", update)
+        for guild_id, default_channel_id in update:
+            channel = self.bot.get_channel(int(default_channel_id[2:-1]))
+            for n in notifications:
+                await channel.send(n)
+        print("Finished reminding!")
+
+    @eventReminder.before_loop
+    async def beforeEventReminder(self):
+        print("Event Reminder waiting...")
+        await self.bot.wait_until_ready()
 
 class Cleanup(commands.Cog):
     def __init__(self, bot, conn):

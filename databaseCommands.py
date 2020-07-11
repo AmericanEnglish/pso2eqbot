@@ -121,9 +121,17 @@ def getToBeUpdated(conn):
         # print(timezone)
         # print(eleven)
         # print(local_day)
-        if eleven == local_day:
+        if eleven == local_day and default_channel_id is not None:
             toBeUpdated.append(g)
     return toBeUpdated
+
+def getAllGuilds(conn):
+    # Possibly add a notifcation option where you opt in or out of it
+    # So then expand this statement to include a where associated with that bool
+    with conn.begin():
+        res = conn.execute("""SELECT guild_id, default_channel_id FROM discord_guild_table;""")
+    res = res.fetchall()
+    return res
 
 if __name__ == "__main__":
     # from scraper import getAllEQs
