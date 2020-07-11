@@ -10,11 +10,13 @@ logger.addHandler(handler)
 
 if __name__ == "__main__":
     from discord.ext import commands
-    from bcommands import today, tomorrow
+    from bcommands import TimeCommands, ActiveBackground
     # client = discord.Client()
-    bot = commands.Bot(command_prefix='::')
+    bot = commands.Bot(command_prefix=';;')
 
-    bot.add_command(today)
-    bot.add_command(tomorrow)
+    from databaseCommands import connectToDatabase
+    conn = connectToDatabase()
+    bot.add_cog(TimeCommands(bot, conn))
+    bot.add_cog(ActiveBackground(bot, conn))
     with open("token.txt", "r") as infile:
         bot.run(infile.read())

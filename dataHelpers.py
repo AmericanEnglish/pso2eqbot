@@ -15,7 +15,39 @@ def getTodaysEvents(db=None, *args):
     # Till the end of today -- make a today+ which displays into tomorrow near end of day
     end    = datetime(year=today.year, month=today.month, day=(today + timedelta(days=1)).day, hour=0, minute=0, second=0, microsecond=0)
     end    = tz.localize(end)
+    d = getEventsDB(before, end, tz, db)
+    if d.shape[0] != 0:
+        # print(d)
+        d = pandas.DataFrame(d[["date", "time", "event"]].to_numpy(), columns=["Date", "Time", "Event"])
+        return "```\nTimezone: {}\n{}\n```".format(tz, d.to_string(index=False))
+    else:
+        return "No events schedule from {} to {}".format(
+                before.strftime("%b, %d %I:%M%p %Z"),
+                end.strftime("%b, %d %I:%M%p %Z"))
 
+def getTomorrowsEvents(db=None, *args):
+    tz = getRequestedTimezone(*args)
+    today = pytz.timezone("America/Detroit").localize(datetime.now())
+    today = today.astimezone(tz)
+    tomorrow = today + timedelta(days=1)
+    tomorrow = datetime(year=tomorrow.year, month=tomorrow.month, day=tomorrow.day, 
+            hour=0, minute=0, second=0, microsecond=0)
+    before = tz.localize(tomorrow)
+    end = datetime(year=tomorrow.year, month=tomorrow.month, day=(tomorrow + timedelta(days=1)).day, 
+            hour=0, minute=0, second=0, microsecond=0)
+    end = tz.localize(end)
+    events = getEventsDB(before, end, tz, db)
+    if events.shape[0] != 0:
+        # print(d)
+        events = pandas.DataFrame(events[["date", "time", "event"]].to_numpy(), columns=["Date", "Time", "Event"])
+        return "```\nTimezone: {}\n{}\n```".format(tz, events.to_string(index=False))
+    else:
+        return "No events schedule from {} to {}".format(
+                before.strftime("%b, %d %I:%M%p %Z"),
+                end.strftime("%b, %d %I:%M%p %Z"))
+
+def getEventsDB(before, end, tz, db):
+    # Expects before and end to be in user's preferred tz
     # Given the "day range" in the users timezone we now need to convert BACK to PDT
     # so that we can search the database
     startPDT = before.astimezone(pytz.timezone("America/Los_Angeles"))
@@ -39,29 +71,9 @@ def getTodaysEvents(db=None, *args):
         times.append((tyme, event))
     # Now chop them up and do the dataframe thing    
     d = pandas.DataFrame(times, columns=["datetime", "event"])
-    if d.shape[0] != 0:
-        d = d.apply(lambda row: addDateAndTimeString(row, tz), axis=1)
-        # print(d)
-        d = pandas.DataFrame(d[["date", "time", "event"]].to_numpy(), columns=["Date", "Time", "Event"])
-        return "```\nTimezone: {}\n{}\n```".format(tz, d.to_string(index=False))
-    else:
-        return "No events schedule from {} to {}".format(
-                before.strftime("%b, %d %I:%M%p %Z"),
-                end.strftime("%b, %d %I:%M%p %Z"))
-
-def getTomorrowsEvents(*args):
-    tz = getRequestedTimezone(*args)
-    today = pytz.timezone("America/Detroit").localize(datetime.now())
-    today = today.astimezone(tz)
-    tomorrow = today + timedelta(days=1)
-    tomorrow = datetime(year=tomorrow.year, month=tomorrow.month, day=tomorrow.day, 
-            hour=0, minute=0, second=0, microsecond=0)
-    before = tz.localize(tomorrow)
-    end = datetime(year=tomorrow.year, month=tomorrow.month, day=(tomorrow + timedelta(days=1)).day, 
-            hour=0, minute=0, second=0, microsecond=0)
-    end = tz.localize(end)
-    events = getEvents(before, end, tz)
-    return events
+    # Now convert all times to the user's preferred zone
+    d = d.apply(lambda row: addDateAndTimeString(row, tz), axis=1)
+    return d
 
 def getRequestedTimezone(*args):
     # Maintain a lazy list for easy reference
@@ -104,3 +116,5 @@ def addDateAndTimeString(row, tz):
     row["date"] = row["datetime"].astimezone(tz).strftime("%b, %d")
     row["time"] = row["datetime"].astimezone(tz).strftime("%I:%M%p")
     return row
+
+

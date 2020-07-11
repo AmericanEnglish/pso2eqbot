@@ -289,6 +289,15 @@ def getSomeUQData(pageNames):
     final = combineAllFrames(pageNames, frames)
     return final
 
+# Figure out how to use aiohttp here...
+# https://stackoverflow.com/questions/47934212/how-to-use-python-aiohttp-library-to-download-multiple-webpages
+def getSomeUQData(pageNames):
+    pages  = getEventPages(pageNames)
+    tables = getTables(pages)
+    frames = pageTablesToDataframes(tables)
+    final  = combineAllFrames(pageNames, frames)
+    return final
+
 if __name__ == "__main__":
     uqEntries = getUQPages()
     lines = uqEntries
