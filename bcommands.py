@@ -26,6 +26,12 @@ class TimeCommands(commands.Cog):
 
     @commands.command()
     async def tomorrow(self, ctx, *args):
+        if "-tz" not in args:
+            tz = getDefaultTimezoneDB(self.conn, ctx.guild.id)
+            if tz is not None:
+                args = list(args)
+                args.append("-tz")
+                args.append(str(tz))
         await ctx.send(getTomorrowsEvents(self.conn, *args))
     
     @commands.command()
