@@ -128,30 +128,30 @@ def getNotifications(conn, minutesOut=60, rightNow=True):
     end = now + timedelta(minutes=minutesOut)
     with conn.begin():
         res = conn.execute(text(
-            """SELECT datetime(datetime), event FROM pso2na_timetable 
+            """SELECT datetime(datetime), event, category FROM pso2na_timetable 
             WHERE :end >= pso2na_timetable.datetime
             AND pso2na_timetable.datetime >= :start;"""),
                 {"end": end, "start": start})
     res = res.fetchall()
     # If you want customizble intervals this section has to change 
     interval = [60, 15, 0]
-    base = "The URGENT QUEST {} is happenning {}"
-    print(start)
-    print(now)
-    print(end)
-    print(res)
+    base = "The {} {} is happenning {}"
+    # print(start)
+    # print(now)
+    # print(end)
+    # print(res)
     toSend = []
-    for dt, event in res:
+    for dt, event, category in res:
         tyme = datetime.strptime(dt, "%Y-%m-%d %H:%M:%S")
         lnow = datetime(year=now.year, month=now.month, day=now.day, hour=now.hour, minute=now.minute, second=0)
         diff = tyme - lnow
-        print(diff, type(diff))
-        print(timedelta(minutes=30) == timedelta(minutes=30))
+        # print(diff, type(diff))
+        # print(timedelta(minutes=30) == timedelta(minutes=30))
         if diff == timedelta(minutes=interval[0]):
-            toSend.append(base.format(event, "in {} minutes!".format(interval[0])))
+            toSend.append(base.format(category, event, "in {} minutes!".format(interval[0])))
         elif diff == timedelta(minutes=interval[1]):
-            toSend.append(base.format(event, "in {} minutes!".format(interval[1])))
+            toSend.append(base.format(category, event, "in {} minutes!".format(interval[1])))
         elif diff == timedelta(minutes=interval[2]):
-            toSend.append(base.format(event, "now!"))
-    print(toSend)
+            toSend.append(base.format(category, event, "now!"))
+    # print(toSend)
     return toSend[::-1]

@@ -50,7 +50,7 @@ class TimeCommands(commands.Cog):
             tz = getDefaultTimezoneDB(self.conn, ctx.guild.id)
             await ctx.send("Default timezone set to {}".format(tz))
         elif "-ch" in args:
-            channel = getDefaultChannelDB(self.conn, ctx.guild.id)
+            channel = getDefaultChannelDB(self.conn, ctx.guild.id)[1]
             print(channel)
             # channel = self.bot.get_channel(int(channel[2:-1]))
             await ctx.send("Default channel set to {}".format(channel))
@@ -86,27 +86,30 @@ class ActiveBackground(commands.Cog):
         update = getToBeUpdated(self.conn)
         # print(update)
         for guild_id, default_channel_id, timezone in update:
-            channel = self.bot.get_channel(int(default_channel_id[2:-1]))
-            await channel.send(getTomorrowsEvents(self.conn, *['-tz', timezone]))
+            if default_channel_id is not None:
+                channel = self.bot.get_channel(int(default_channel_id[2:-1]))
+                await channel.send(getTomorrowsEvents(self.conn, *['-tz', timezone]))
         # print("Finished sending reminder.")
 
     @dailyReminder.before_loop
     async def beforeReminder(self):
-        print("Daily Reminder waiting...")
+        # print("Daily Reminder waiting...")
         await self.bot.wait_until_ready()
 
     @tasks.loop(seconds=60, count=None)
     async def eventReminder(self):
-        print("Reminding....")
+        # print("Reminding....")
         notifications = getNotifications(self.conn, minutesOut=60, rightNow=True)
-        update = getAllGuilds(self.conn)
-        print("Notifications....", notifications)
-        print("Notify:", update)
-        for guild_id, default_channel_id in update:
-            channel = self.bot.get_channel(int(default_channel_id[2:-1]))
-            for n in notifications:
-                await channel.send(n)
-        print("Finished reminding!")
+        # print("Notifications....", notifications)
+        # print("Notify:", update)
+        if len(notifications) == 0:
+            update = getAllGuilds(self.conn)
+            for guild_id, default_channel_id in update:
+                if default_channel_id is not None:
+                    channel = self.bot.get_channel(int(default_channel_id[2:-1]))
+                    for n in notifications:
+                        await channel.send(n)
+        # print("Finished reminding!")
 
     @eventReminder.before_loop
     async def beforeEventReminder(self):

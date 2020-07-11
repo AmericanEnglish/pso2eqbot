@@ -39,7 +39,7 @@ async def updateForNewEvents(conn, where="webpage"):
             inDB.append(page)
         missing = setdiff1d(pages, inDB)
         final = getSomeUQData(missing)
-        print(type(final))
+        # print(type(final))
         final.to_sql("pso2na_timetable",conn, if_exists="append", index=False)
 
 def setDefaultTimezoneDB(conn, guild, tz):
@@ -83,13 +83,14 @@ def setDefaultChannelDB(conn, guild, channel):
 
 def getDefaultChannelDB(conn, guild):
     with conn.begin():
-        res = conn.execute(text("SELECT default_channel_id FROM discord_guild_table WHERE discord_guild_table.guild_id=:gid;"),
+        res = conn.execute(text("SELECT guild_id, default_channel_id FROM discord_guild_table WHERE discord_guild_table.guild_id=:gid;"),
                 {"gid": guild})
     res = res.fetchall()
+    # print("default channel:", res)
     if len(res) == 0:
         return None
     else:
-        return res[0][0]
+        return res[0]
     
 def getToBeUpdated(conn):
     # Get datetime
