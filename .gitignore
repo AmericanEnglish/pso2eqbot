@@ -3,3 +3,4 @@ token.txt
 *.swp
 *.log
 *.db
+__pycache__
