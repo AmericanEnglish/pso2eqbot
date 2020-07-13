@@ -102,7 +102,8 @@ class ActiveBackground(commands.Cog):
         notifications = getNotifications(self.conn, minutesOut=60, rightNow=True)
         # print("Notifications....", notifications)
         # print("Notify:", update)
-        if len(notifications) == 0:
+        if len(notifications) != 0:
+            print(notifications)
             update = getAllGuilds(self.conn)
             for guild_id, default_channel_id in update:
                 if default_channel_id is not None:
