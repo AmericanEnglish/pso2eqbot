@@ -25,8 +25,11 @@ def getUQPages():
     lines = list(filter(lambda line: line[-1] == "emergency", lines))
     # Take out the uqMONTHYEARpartX piece
     lines = list(map(lambda line: line[1], lines))
+    # print(lines)
     # Get rid of anything that doesn't fit the eqMONTHYEARpartX format like.... "about"
-    lines = list(filter(lambda line: bool(match("^uq\\w+\\d+\w+", line)), lines))
+    # lines = list(filter(lambda line: bool(match("^uq\\w+\\d+\\w+", line)), lines))
+    # lines.extend(list(filter(lambda line: bool(match("^urgentquestschedule\\d+", line)), lines)))
+    # Just say whatever and use try: for parsing the pages, if it fails assume it wasn't an eq page....
     return lines
     
 
@@ -124,12 +127,15 @@ def getTables(pages):
     # I guess we'll trust this for now
     for i, subtables in enumerate(tables):
         for j, subtable in enumerate(subtables):
-            if j % 2 == 0:
-                # Big table
-                tables[i][j] = parseLargeTable(subtable)
-            else:
-                # Small table
-                tables[i][j] = parseSmallTable(subtable)
+            try:
+                if j % 2 == 0:
+                    # Big table
+                    tables[i][j] = parseLargeTable(subtable)
+                else:
+                    # Small table
+                    tables[i][j] = parseSmallTable(subtable)
+            except:
+                print("Failed to parse {}".format(pages[j//2]))
     # Insert the color into the small tables
     # print(len(tables), len(tables[0]))
     return tables
@@ -246,9 +252,18 @@ def getDatetime(args):
     v.append(args[1])
     v.extend(args[2][:-2].split(":"))
     v.append(args[2][-2:])
-    value = "{:02d}/{:02d}/{} {:02d}:{:02d}{}".format(
-            int(v[0]), int(v[1]), int(v[2]), int(v[3]), int(v[4]), v[5])
-    value = datetime.strptime(value, '%m/%d/%Y %I:%M%p')
+    # If this fails, just assume the event was for this year,
+    # Most likely failed because they didn't bother putting the year 
+    # in the url
+    try:
+        value = "{:02d}/{:02d}/{} {:02d}:{:02d}{}".format(
+                int(v[0]), int(v[1]), int(v[2]), int(v[3]), int(v[4]), v[5])
+        value = datetime.strptime(value, '%m/%d/%Y %I:%M%p')
+    except ValueError:
+        value = "{:02d}/{:02d}/{} {:02d}:{:02d}{}".format(
+                int(v[0]), int(v[1]), datetime.now().year, int(v[3]), int(v[4]), v[5])
+        value = datetime.strptime(value, '%m/%d/%Y %I:%M%p')
+
     value = pytz.timezone("America/Los_Angeles").localize(value)
     return value
 

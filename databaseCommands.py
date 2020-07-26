@@ -26,18 +26,21 @@ def connectToDatabase():
                     conn.execute(table+";")
     return conn
 
-async def updateForNewEvents(conn, where="webpage"):
+def updateForNewEvents(conn, where="webpage"):
     if where == "webpage":
         from numpy import setdiff1d
         from scraper import getUQPages, getSomeUQData
         pages = getUQPages()
+        print("found: ", pages)
         # Get all pages from the database
         with conn.begin():
             res = conn.execute("""SELECT DISTINCT fromPage FROM pso2na_timetable ;""")
         inDB = []
         for page in res.fetchall():
             inDB.append(page)
+        print("inDB: ", inDB)
         missing = setdiff1d(pages, inDB)
+        print("missing:", missing)
         final = getSomeUQData(missing)
         # print(type(final))
         final.to_sql("pso2na_timetable",conn, if_exists="append", index=False)

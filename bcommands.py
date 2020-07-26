@@ -69,14 +69,16 @@ class ActiveBackground(commands.Cog):
     def __init__(self, bot, conn):
         self.conn = conn
         self.bot  = bot
-        self.updateViaWebpage.start()
+        # self.updateViaWebpage.start()
+        self.updateViaWebpage()
         self.dailyReminder.start()
         self.eventReminder.start()
 
-    @tasks.loop(hours=24)
-    async def updateViaWebpage(self):
+    # @tasks.loop(hours=24)
+    def updateViaWebpage(self):
         print("Updating database...")
-        await updateForNewEvents(self.conn, where="webpage")
+        # await updateForNewEvents(self.conn, where="webpage")
+        updateForNewEvents(self.conn, where="webpage")
         print("Finished update")
     
     @tasks.loop(seconds=60, count=None)
