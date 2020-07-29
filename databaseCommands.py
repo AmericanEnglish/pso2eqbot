@@ -26,11 +26,11 @@ def connectToDatabase():
                     conn.execute(table+";")
     return conn
 
-def updateForNewEvents(conn, where="webpage"):
+async def updateForNewEvents(conn, where="webpage"):
     if where == "webpage":
         from numpy import setdiff1d
-        from scraper import getUQPages, getSomeUQData
-        pages = getUQPages()
+        from scraper import getUQPages, getSomeUQDataAsync
+        pages = await getUQPages()
         print("found: ", pages)
         # Get all pages from the database
         with conn.begin():
@@ -41,9 +41,14 @@ def updateForNewEvents(conn, where="webpage"):
         print("inDB: ", inDB)
         missing = setdiff1d(pages, inDB)
         print("missing:", missing)
-        final = getSomeUQData(missing)
+        final = await getSomeUQDataAsync(missing)
         # print(type(final))
-        final.to_sql("pso2na_timetable",conn, if_exists="append", index=False)
+        while True:
+            try:
+                final.to_sql("pso2na_timetable",conn, if_exists="append", index=False)
+                break
+            except Exception as e:
+                print("Failed to update db because {}".format(e))
 
 def setDefaultTimezoneDB(conn, guild, tz):
     # Check is guild already has a default timezone

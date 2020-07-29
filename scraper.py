@@ -10,13 +10,20 @@ from datetime import datetime
 from numpy.linalg import norm
 # Do something with this because globals are naughty
 base = "https://pso2.com/news/urgent-quests"
-def getUQPages():
+async def getUQPages():
+    # def getUQPages():
     from re import match
+    import aiohttp
     chars = "(),'"
 
     # What if the request fails?
-    r = urllib.request.urlopen(base)
-    soup = BeautifulSoup(r.read(), features="html.parser")
+    # r = urllib.request.urlopen(base)
+    print("Fetching UQ pages...")
+    async with aiohttp.ClientSession() as session:
+        r = await fetch(session, base)
+    print("Fetched!")
+    # soup = BeautifulSoup(r.read(), features="html.parser")
+    soup = BeautifulSoup(r, features="html.parser")
     lines = soup.findAll("a", {"class": "read-more"})
     # In general get onclick returns (ShowDetails("nextpage", "category"))
     # So we are looking for  (ShowDetails("uqMONTHYEARpartX", "emergency"))
@@ -30,6 +37,7 @@ def getUQPages():
     # lines = list(filter(lambda line: bool(match("^uq\\w+\\d+\\w+", line)), lines))
     # lines.extend(list(filter(lambda line: bool(match("^urgentquestschedule\\d+", line)), lines)))
     # Just say whatever and use try: for parsing the pages, if it fails assume it wasn't an eq page....
+    print("Scraped {} pages!".format(len(lines)))
     return lines
     
 
@@ -305,13 +313,38 @@ def getSomeUQData(pageNames):
     return final
 
 # Figure out how to use aiohttp here...
-# https://stackoverflow.com/questions/47934212/how-to-use-python-aiohttp-library-to-download-multiple-webpages
-def getSomeUQData(pageNames):
-    pages  = getEventPages(pageNames)
+# https://stackoverflow.com/questions/35879769/fetching-multiple-urls-with-aiohttp-in-python-3-5
+async def getSomeUQDataAsync(pageNames):
+    pages = await getEventPagesAsync(pageNames)
     tables = getTables(pages)
     frames = pageTablesToDataframes(tables)
-    final  = combineAllFrames(pageNames, frames)
-    return final
+    final = combineAllFrames(pageNames, frames)
+    return final 
+
+async def fetch(session, url):
+    print("Fetching |{}| ...".format(url))
+    async with session.get(url) as response:
+        if response.status != 200:
+            response.raise_for_status()
+        return await response.text()
+
+async def fetch_all(session, urls):
+    import asyncio
+    tasks = []
+    for url in urls:
+        task = asyncio.create_task(fetch(session, url))
+        tasks.append(task)
+    results = await asyncio.gather(*tasks)
+    return results
+
+# async compatible
+async def getEventPagesAsync(events):
+    # What happens if urllib fails?
+    import aiohttp
+    pages = list(map(lambda page: "{}/{}".format(base, page), events))
+    async with aiohttp.ClientSession() as session:
+        pages = await fetch_all(session, pages) 
+    return pages
 
 if __name__ == "__main__":
     uqEntries = getUQPages()
