@@ -74,7 +74,7 @@ class ActiveBackground(commands.Cog):
         self.dailyReminder.start()
         self.eventReminder.start()
 
-    @tasks.loop(hours=24, count=2)
+    @tasks.loop(hours=24, count=None)
     async def updateViaWebpage(self):
         from datetime import datetime
         print("Updating database...", datetime.now())
