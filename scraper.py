@@ -40,12 +40,41 @@ async def getUQPages():
     print("Scraped {} pages!".format(len(lines)))
     return lines
     
+def parseLargeTableHeader(allRows):
+    # Determine the size of the header:
+    head = 0
+    for row in allRows:
+        weeks = 0
+        times = 0
+        # Week or Time should mean auto skip...
+        for td in row.findAll("td"):
+            if "week" in str(td).lower():
+                weeks += 1
+            elif "time" in str(td).lower():
+                times += 1
+        if weeks != 0 or times != 0:
+            # print("Weeks",weeks)
+            # print("Times", times)
+            head += 1
+        if times != 0:
+            break
+    return head, times
 
 def parseLargeTable(table):
+    allRows = table.findAll("tr")[:]
+    head, times = parseLargeTableHeader(allRows)       
     # Skip the table header and column header
-    for row in table.findAll("tr")[3:]:
-        # Cut off the time columns
-        for element in row.findAll("td")[1:]:
+    # print("Header rows:", head)
+    # print("Time columns:", times)
+    for row in allRows[head:]:
+        # print("Row type:", type(row))
+        elements = row.findAll("td")[:]
+        # print("Elements type:", type(elements))
+        # print("Elements len?:", len(elements))
+        # print("Elements to list?", len(elements[:]))
+        # for element in row.findAll("td")[1:]:
+        # Puts the color into non-time columns
+        for element in elements[times:]:
             if "background" in element['style']:
                 # print(element['style'])
                 # print(element['style'].split(";"))
@@ -139,12 +168,14 @@ def getTables(pages):
                 if j % 2 == 0:
                     # Big table
                     tables[i][j] = parseLargeTable(subtable)
+                    # print(tables[i][j])
                 else:
                     # Small table
                     tables[i][j] = parseSmallTable(subtable)
-            except:
-                print("Failed to parse {}".format(pages[j//2]))
-    # Insert the color into the small tables
+            except Exception as e:
+                print("Failed to parse {}".format(j//2, ))
+                print("Exception: ", e)
+    # # Insert the color into the small tables
     # print(len(tables), len(tables[0]))
     return tables
 
@@ -159,7 +190,21 @@ def pageTablesToDataframes(tables):
             # Big table
             if j % 2 == 0:
                 t = pandas.read_html(subtable.prettify(), flavor="bs4")[0].fillna("")
+                # Drop all time columns that are not empty or PDT
+                times = t.iloc[2,:]
+                toDrop = []
+                for ind, col in enumerate(times):
+                    if "Time" in col and "PDT" not in col:
+                        toDrop.append(ind)
+                # Empty lists are falsey
+                if toDrop:
+                    # print(t)
+                    t.drop(t.columns[toDrop],axis=1,inplace=True)
+                    # In this case we need to reset row/col index so later function do not break
+                    t.reset_index(drop=True,inplace=True)
+                    t.columns = range(t.shape[1])
                 tables[i][j] = t
+                # print(t)
             # Little table
             else:
                 t = pandas.read_html(subtable.prettify(), flavor="bs4")[0].fillna("")
@@ -173,7 +218,6 @@ def pageTablesToDataframes(tables):
                     t = t.apply(splitEQCategoryLine, axis=1)
                 t = pandas.DataFrame(t.to_numpy(), columns=["hex", "category", "event", "duration"])
                 t = t.apply(lambda row: row.apply(lambda x: x.strip()), axis=1)
-                # print(t)
                 tables[i][j] = t
     return tables 
 
@@ -214,7 +258,6 @@ def assembleBetterTable(pageName, schedule, legend):
     year = pageName.split("part")[0][-4:]
     days  = schedule.iloc[0,1:].to_list()
     days  = [day.strip() for day in days]
-
     d = pandas.DataFrame({}, columns=columns)
     for i, row in schedule.iloc[3:,:].iterrows():
         for j, col in row.iloc[1:].iteritems():
